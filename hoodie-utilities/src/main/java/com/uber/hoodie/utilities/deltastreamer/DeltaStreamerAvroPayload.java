@@ -26,6 +26,8 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -63,5 +65,10 @@ public class DeltaStreamerAvroPayload extends DeltaStreamerPayload implements Ho
     @Override
     public Optional<IndexedRecord> getInsertValue(Schema schema) throws IOException {
         return Optional.of(HoodieAvroUtils.rewriteRecord(record, schema));
+    }
+
+    @Override
+    public Map<String, String> getMetadata() {
+        return Collections.emptyMap();
     }
 }

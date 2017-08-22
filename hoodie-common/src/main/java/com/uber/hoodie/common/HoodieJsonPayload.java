@@ -20,6 +20,8 @@ import com.uber.hoodie.avro.MercifulJsonConverter;
 import com.uber.hoodie.common.model.HoodieRecordPayload;
 import com.uber.hoodie.exception.HoodieException;
 
+import java.util.Collections;
+import java.util.Map;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.commons.io.IOUtils;
@@ -55,6 +57,11 @@ public class HoodieJsonPayload implements HoodieRecordPayload<HoodieJsonPayload>
     @Override public Optional<IndexedRecord> getInsertValue(Schema schema) throws IOException {
         MercifulJsonConverter jsonConverter = new MercifulJsonConverter(schema);
         return Optional.of(jsonConverter.convert(getJsonData()));
+    }
+
+    @Override
+    public Map<String, String> getMetadata() {
+        return Collections.emptyMap();
     }
 
     private String getJsonData() throws IOException {

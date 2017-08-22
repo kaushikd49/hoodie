@@ -18,6 +18,8 @@ package com.uber.hoodie.common.model;
 
 import com.uber.hoodie.common.util.HoodieAvroUtils;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 
 import org.apache.avro.Schema;
@@ -52,5 +54,10 @@ public class HoodieAvroPayload implements HoodieRecordPayload<HoodieAvroPayload>
     @Override
     public Optional<IndexedRecord> getInsertValue(Schema schema) throws IOException {
         return record.map(r -> HoodieAvroUtils.rewriteRecord(r, schema));
+    }
+
+    @Override
+    public Map<String, String> getMetadata() {
+        return Collections.emptyMap();
     }
 }

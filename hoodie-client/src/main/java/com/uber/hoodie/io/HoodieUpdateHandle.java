@@ -28,6 +28,7 @@ import com.uber.hoodie.exception.HoodieUpsertException;
 import com.uber.hoodie.io.storage.HoodieStorageWriter;
 import com.uber.hoodie.io.storage.HoodieStorageWriterFactory;
 import com.uber.hoodie.table.HoodieTable;
+import java.util.Map;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.hadoop.fs.Path;
@@ -67,7 +68,7 @@ public class HoodieUpdateHandle <T extends HoodieRecordPayload> extends HoodieIO
      * Load the new incoming records in a map, and extract the old file path.
      */
     private void init(String fileId, Iterator<HoodieRecord<T>> newRecordsItr) {
-        WriteStatus writeStatus = new WriteStatus();
+        WriteStatus writeStatus = config.getWriteStatusInstance();
         writeStatus.setStat(new HoodieWriteStat());
         this.writeStatus = writeStatus;
         this.fileId = fileId;
@@ -129,6 +130,7 @@ public class HoodieUpdateHandle <T extends HoodieRecordPayload> extends HoodieIO
 
 
     private boolean writeUpdateRecord(HoodieRecord<T> hoodieRecord, Optional<IndexedRecord> indexedRecord) {
+        Map<String, String> recordMetadata = hoodieRecord.getData().getMetadata();
         try {
             if(indexedRecord.isPresent()) {
                 storageWriter.writeAvroWithMetadata(indexedRecord.get(), hoodieRecord);
@@ -139,11 +141,11 @@ public class HoodieUpdateHandle <T extends HoodieRecordPayload> extends HoodieIO
             }
 
             hoodieRecord.deflate();
-            writeStatus.markSuccess(hoodieRecord);
+            writeStatus.markSuccess(hoodieRecord, recordMetadata);
             return true;
         } catch (Exception e) {
             logger.error("Error writing record  "+ hoodieRecord, e);
-            writeStatus.markFailure(hoodieRecord, e);
+            writeStatus.markFailure(hoodieRecord, e, recordMetadata);
         }
         return false;
     }

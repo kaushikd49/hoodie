@@ -28,6 +28,7 @@ import com.uber.hoodie.exception.HoodieInsertException;
 import com.uber.hoodie.io.storage.HoodieStorageWriter;
 import com.uber.hoodie.io.storage.HoodieStorageWriterFactory;
 import com.uber.hoodie.table.HoodieTable;
+import java.util.Map;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.LogManager;
@@ -50,7 +51,7 @@ public class HoodieInsertHandle<T extends HoodieRecordPayload> extends HoodieIOH
     public HoodieInsertHandle(HoodieWriteConfig config, String commitTime,
                               HoodieTable<T> hoodieTable, String partitionPath) {
         super(config, commitTime, hoodieTable);
-        this.status = new WriteStatus();
+        this.status = config.getWriteStatusInstance();
         status.setFileId(UUID.randomUUID().toString());
         status.setPartitionPath(partitionPath);
 
@@ -89,6 +90,7 @@ public class HoodieInsertHandle<T extends HoodieRecordPayload> extends HoodieIOH
      * @param record
      */
     public void write(HoodieRecord record) {
+        Map<String, String> recordMetadata = record.getData().getMetadata();
         try {
             Optional<IndexedRecord> avroRecord = record.getData().getInsertValue(schema);
 
@@ -100,13 +102,12 @@ public class HoodieInsertHandle<T extends HoodieRecordPayload> extends HoodieIOH
             } else {
                 recordsDeleted++;
             }
-
             record.deflate();
-            status.markSuccess(record);
+            status.markSuccess(record, recordMetadata);
         } catch (Throwable t) {
             // Not throwing exception from here, since we don't want to fail the entire job
             // for a single record
-            status.markFailure(record, t);
+            status.markFailure(record, t, recordMetadata);
             logger.error("Error writing record " + record, t);
         }
     }

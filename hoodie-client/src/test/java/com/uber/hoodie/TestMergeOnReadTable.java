@@ -17,6 +17,8 @@
 package com.uber.hoodie;
 
 import com.uber.hoodie.common.HoodieTestDataGenerator;
+import com.uber.hoodie.common.TestRawTripPayload.SampleMergeMetadataWriteStatus;
+import com.uber.hoodie.common.minicluster.HdfsTestService;
 import com.uber.hoodie.common.model.HoodieDataFile;
 import com.uber.hoodie.common.model.HoodieKey;
 import com.uber.hoodie.common.model.HoodieRecord;
@@ -113,6 +115,12 @@ public class TestMergeOnReadTable {
 
         List<WriteStatus> statuses = client.upsert(writeRecords, newCommitTime).collect();
         assertNoWriteErrors(statuses);
+        Map<String, String> allWriteStatusMergedMetadataMap = SampleMergeMetadataWriteStatus.mergeAllMetadata(statuses);
+        assertTrue(allWriteStatusMergedMetadataMap.containsKey("foo"));
+        assertTrue(allWriteStatusMergedMetadataMap.containsKey("bar"));
+        assertEquals(String.valueOf(2 * records.size()), allWriteStatusMergedMetadataMap.get("foo")); // foo = 2 for each record
+        assertEquals(String.valueOf(records.size()), allWriteStatusMergedMetadataMap.get("bar")); // bar = 1 for each record
+
 
         HoodieTableMetaClient metaClient = new HoodieTableMetaClient(fs, cfg.getBasePath());
         HoodieTable hoodieTable = HoodieTable.getHoodieTable(metaClient, cfg);
@@ -180,7 +188,7 @@ public class TestMergeOnReadTable {
     }
 
     private HoodieWriteConfig getConfig() {
-        return getConfigBuilder().build();
+        return getConfigBuilder().withWriteStatusClass(SampleMergeMetadataWriteStatus.class).build();
     }
 
     private HoodieWriteConfig.Builder getConfigBuilder() {

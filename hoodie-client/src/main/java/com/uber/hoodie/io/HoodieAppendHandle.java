@@ -62,7 +62,7 @@ public class HoodieAppendHandle<T extends HoodieRecordPayload> extends HoodieIOH
     public HoodieAppendHandle(HoodieWriteConfig config, String commitTime,
         HoodieTable<T> hoodieTable, String fileId, Iterator<HoodieRecord<T>> recordItr) {
         super(config, commitTime, hoodieTable);
-        WriteStatus writeStatus = new WriteStatus();
+        WriteStatus writeStatus = config.getWriteStatusInstance();
         writeStatus.setStat(new HoodieDeltaWriteStat());
         this.writeStatus = writeStatus;
         this.fileId = fileId;
@@ -114,6 +114,7 @@ public class HoodieAppendHandle<T extends HoodieRecordPayload> extends HoodieIOH
     }
 
     private Optional<IndexedRecord> getIndexedRecord(HoodieRecord<T> hoodieRecord) {
+        Map<String, String> recordMetadata = hoodieRecord.getData().getMetadata();
         try {
             Optional<IndexedRecord> avroRecord = hoodieRecord.getData().getInsertValue(schema);
 
@@ -131,11 +132,11 @@ public class HoodieAppendHandle<T extends HoodieRecordPayload> extends HoodieIOH
             }
 
             hoodieRecord.deflate();
-            writeStatus.markSuccess(hoodieRecord);
+            writeStatus.markSuccess(hoodieRecord, recordMetadata);
             return avroRecord;
         } catch (Exception e) {
             logger.error("Error writing record  " + hoodieRecord, e);
-            writeStatus.markFailure(hoodieRecord, e);
+            writeStatus.markFailure(hoodieRecord, e, recordMetadata);
         }
         return Optional.empty();
     }

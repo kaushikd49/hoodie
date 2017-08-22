@@ -18,9 +18,15 @@ package com.uber.hoodie.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.uber.hoodie.WriteStatus;
 import com.uber.hoodie.avro.MercifulJsonConverter;
+import com.uber.hoodie.common.model.HoodieRecord;
 import com.uber.hoodie.common.model.HoodieRecordPayload;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map.Entry;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.commons.io.IOUtils;
@@ -91,6 +97,14 @@ public class TestRawTripPayload implements HoodieRecordPayload<TestRawTripPayloa
         }
     }
 
+    @Override
+    public Map<String, String> getMetadata() {
+        Map<String, String> metadataMap = new HashMap<>();
+        metadataMap.put("foo", "2");
+        metadataMap.put("bar", "1");
+        return metadataMap;
+    }
+
     public String getRowKey() {
         return rowKey;
     }
@@ -119,5 +133,51 @@ public class TestRawTripPayload implements HoodieRecordPayload<TestRawTripPayloa
         StringWriter sw = new StringWriter(dataSize);
         IOUtils.copy(iis, sw);
         return sw.toString();
+    }
+
+    public static class SampleMergeMetadataWriteStatus extends WriteStatus {
+        private Map<String, String> mergedMetadataMap = new HashMap<>();
+
+        @Override
+        public void markSuccess(HoodieRecord record, Map<String, String> recordMetadata) {
+            super.markSuccess(record, recordMetadata);
+            mergeMetadataMaps(recordMetadata, mergedMetadataMap);
+        }
+
+        @Override
+        public void markFailure(HoodieRecord record, Throwable t,
+            Map<String, String> recordMetadata) {
+            super.markFailure(record, t, recordMetadata);
+            mergeMetadataMaps(recordMetadata, mergedMetadataMap);
+        }
+
+        public static Map<String, String> mergeAllMetadata(List<WriteStatus> writeStatuses) {
+            Map<String, String> allWriteStatusMergedMetadataMap = new HashMap<>();
+            for (WriteStatus writeStatus : writeStatuses) {
+                SampleMergeMetadataWriteStatus.mergeMetadataMaps(
+                    ((SampleMergeMetadataWriteStatus)writeStatus).getMergedMetadataMap(),
+                    allWriteStatusMergedMetadataMap);
+            }
+            return allWriteStatusMergedMetadataMap;
+        }
+
+        private static void mergeMetadataMaps(Map<String, String> mergeFromMap, Map<String, String> mergeToMap) {
+            for (Entry<String, String> entry : mergeFromMap.entrySet()) {
+                String key = entry.getKey();
+                if(!mergeToMap.containsKey(key)) {
+                    mergeToMap.put(key, "0");
+                }
+                mergeToMap
+                    .put(key, addStrsAsInt(entry.getValue(), mergeToMap.get(key)));
+            }
+        }
+
+        private Map<String, String> getMergedMetadataMap() {
+            return mergedMetadataMap;
+        }
+
+        private static String addStrsAsInt(String a, String b) {
+            return String.valueOf(Integer.parseInt(a) + Integer.parseInt(b));
+        }
     }
 }

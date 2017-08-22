@@ -24,6 +24,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Status of a write operation.
@@ -47,12 +48,14 @@ public class WriteStatus implements Serializable {
     private long totalRecords = 0;
     private long totalErrorRecords = 0;
 
-    public void markSuccess(HoodieRecord record) {
+    public void markSuccess(HoodieRecord record,
+        Map<String, String> recordMetadata) {
         writtenRecords.add(record);
         totalRecords++;
     }
 
-    public void markFailure(HoodieRecord record, Throwable t) {
+    public void markFailure(HoodieRecord record, Throwable t,
+        Map<String, String> recordMetadata) {
         failedRecords.add(record);
         errors.put(record.getKey(), t);
         totalRecords++;

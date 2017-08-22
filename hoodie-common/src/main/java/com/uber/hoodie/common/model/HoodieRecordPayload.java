@@ -16,6 +16,7 @@
 
 package com.uber.hoodie.common.model;
 
+import java.util.Map;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.IndexedRecord;
 
@@ -56,4 +57,10 @@ public interface HoodieRecordPayload<T extends HoodieRecordPayload> extends Seri
      * Return EMPTY to skip writing this record.
      */
     Optional<IndexedRecord> getInsertValue(Schema schema) throws IOException;
+
+    /**
+     * This method can be used to fetch metadata regarding the HoodieRecordPayload, for the purpose
+     * of capturing some metrics.
+     */
+    Map<String, String> getMetadata();
 }

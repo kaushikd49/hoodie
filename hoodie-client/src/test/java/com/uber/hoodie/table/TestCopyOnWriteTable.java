@@ -16,6 +16,7 @@
 
 package com.uber.hoodie.table;
 
+import com.uber.hoodie.common.TestRawTripPayload.SampleMergeMetadataWriteStatus;
 import com.uber.hoodie.common.table.HoodieTableMetaClient;
 import com.uber.hoodie.common.table.HoodieTimeline;
 import com.uber.hoodie.config.HoodieWriteConfig;
@@ -34,13 +35,13 @@ import com.uber.hoodie.common.util.ParquetUtils;
 import com.uber.hoodie.config.HoodieCompactionConfig;
 import com.uber.hoodie.io.HoodieInsertHandle;
 import com.uber.hoodie.config.HoodieStorageConfig;
+import java.util.Map;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.avro.AvroReadSupport;
 import org.apache.parquet.hadoop.ParquetReader;
-import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.junit.After;
 import org.junit.Before;
@@ -105,7 +106,7 @@ public class TestCopyOnWriteTable {
     private HoodieWriteConfig.Builder makeHoodieClientConfigBuilder() throws Exception {
         // Prepare the AvroParquetIO
         String schemaStr = IOUtils.toString(getClass().getResourceAsStream("/exampleSchema.txt"), "UTF-8");
-        return HoodieWriteConfig.newBuilder().withPath(basePath).withSchema(schemaStr);
+        return HoodieWriteConfig.newBuilder().withPath(basePath).withSchema(schemaStr).withWriteStatusClass(SampleMergeMetadataWriteStatus.class);
     }
 
     // TODO (weiy): Add testcases for crossing file writing.
@@ -134,7 +135,14 @@ public class TestCopyOnWriteTable {
         records.add(new HoodieRecord(new HoodieKey(rowChange3.getRowKey(), rowChange3.getPartitionPath()), rowChange3));
 
         // Insert new records
-        HoodieClientTestUtils.collectStatuses(table.handleInsert(firstCommitTime, records.iterator()));
+        List<WriteStatus> writeStatuses = HoodieClientTestUtils
+            .collectStatuses(table.handleInsert(firstCommitTime, records.iterator()));
+        Map<String, String> allWriteStatusMergedMetadataMap = SampleMergeMetadataWriteStatus.mergeAllMetadata(writeStatuses);
+        assertTrue(allWriteStatusMergedMetadataMap.containsKey("foo"));
+        assertTrue(allWriteStatusMergedMetadataMap.containsKey("bar"));
+        assertEquals("6", allWriteStatusMergedMetadataMap.get("foo")); // foo = 2 for 3 records
+        assertEquals("3", allWriteStatusMergedMetadataMap.get("bar")); // bar = 1 for 3 records
+
         // We should have a parquet file generated (TODO: better control # files after we revise AvroParquetIO)
         File parquetFile = null;
         for (File file : new File(this.basePath + partitionPath).listFiles()) {
