@@ -114,7 +114,7 @@ public class HoodieAppendHandle<T extends HoodieRecordPayload> extends HoodieIOH
     }
 
     private Optional<IndexedRecord> getIndexedRecord(HoodieRecord<T> hoodieRecord) {
-        Map<String, String> recordMetadata = hoodieRecord.getData().getMetadata();
+        java.util.Map<String, String> recordMetadata = hoodieRecord.getData().getMetadata();
         try {
             Optional<IndexedRecord> avroRecord = hoodieRecord.getData().getInsertValue(schema);
 
